@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student/Staff Sign Up</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">🍔 Campus Eats</a>
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="{{ url_for('login') }}">Login</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="flash-messages">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="form-container">
+        <h2 style="text-align: center; margin-bottom: 2rem; color: var(--primary-color);">Sign Up</h2>
+        <form id="signupForm" method="POST" action="{{ url_for('signup') }}">
+            <div class="form-group">
+                <label for="unique_user_id">Unique User ID <span style="color: red;">*</span></label>
+                <input type="text" id="unique_user_id" name="unique_user_id" class="form-control" required 
+                       placeholder="e.g., STU2025001 or TEA2025001" maxlength="12"
+                       pattern="[A-Za-z][A-Za-z0-9]{0,11}"
+                       title="Start with a letter, max 12 letters/numbers">
+                <small style="color: var(--text-secondary);">Starts with a letter, up to 12 alphanumeric characters.</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="user_type">User Type <span style="color: red;">*</span></label>
+                <select id="user_type" name="user_type" class="form-control" required>
+                    <option value="">Select Type</option>
+                    <option value="student">Student</option>
+                    <option value="staff">Staff</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="name">Full Name <span style="color: red;">*</span></label>
+                <input type="text" id="name" name="name" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email Address <span style="color: red;">*</span></label>
+                <input type="email" id="email" name="email" class="form-control" required>
+            </div>
+            
+            <div class="form-group" style="position: relative;">
+                <label for="password">Password <span style="color: red;">*</span></label>
+                <div style="position: relative;">
+                    <input type="password" id="password" name="password" class="form-control" required minlength="6">
+                    <button type="button" aria-label="Toggle password visibility" class="eye-btn" onclick="toggleVisibility('password', this)"
+                        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.1rem;">
+                        👁️
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group" style="position: relative;">
+                <label for="confirm_password">Confirm Password <span style="color: red;">*</span></label>
+                <div style="position: relative;">
+                    <input type="password" id="confirm_password" name="confirm_password" class="form-control" required minlength="6">
+                    <button type="button" aria-label="Toggle confirm password visibility" class="eye-btn" onclick="toggleVisibility('confirm_password', this)"
+                        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.1rem;">
+                        👁️
+                    </button>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="phone">Phone Number <span style="color: red;">*</span></label>
+                <input type="tel" id="phone" name="phone" class="form-control" required inputmode="numeric" maxlength="10" pattern="\d{10}"
+                       oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,10);">
+                <small style="color: var(--text-secondary);">Enter up to 10 digits; numbers only.</small>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Sign Up</button>
+        </form>
+        <p style="text-align: center; margin-top: 1.5rem;">
+            Already have an account? <a href="{{ url_for('login') }}" style="color: var(--primary-color); font-weight: 600;">Login</a>
+        </p>
+    </div>
+
+    <script>
+        function toggleVisibility(fieldId, btn) {
+            const el = document.getElementById(fieldId);
+            if (!el) return;
+            if (el.type === 'password') {
+                el.type = 'text';
+                btn.textContent = '🙈';
+            } else {
+                el.type = 'password';
+                btn.textContent = '👁️';
+            }
+            // keep focus on the input after toggle
+            el.focus();
+        }
+
+        // Client-side validation before submit (additional to HTML constraints)
+        document.getElementById('signupForm').addEventListener('submit', function (e) {
+            const uid = document.getElementById('unique_user_id').value;
+            const phone = document.getElementById('phone').value;
+            const pw = document.getElementById('password').value;
+            const cpw = document.getElementById('confirm_password').value;
+
+            const uidRe = /^[A-Za-z][A-Za-z0-9]{0,11}$/;
+            if (!uidRe.test(uid)) {
+                alert('Unique User ID must start with a letter and be up to 12 alphanumeric characters.');
+                e.preventDefault();
+                return false;
+            }
+
+            if (!/^[0-9]{1,10}$/.test(phone)) {
+                alert('Phone number must be up to 10 digits and contain digits only.');
+                e.preventDefault();
+                return false;
+            }
+
+            if (pw !== cpw) {
+                alert('Passwords do not match.');
+                e.preventDefault();
+                return false;
+            }
+
+            return true;
+        });
+    </script>
+</body>
+</html>

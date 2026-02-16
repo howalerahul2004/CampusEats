@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us - Campus Eats</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">🍔 Campus Eats</a>
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="{{ url_for('login') }}">User Login</a></li>
+                <li><a href="{{ url_for('signup') }}">Sign Up</a></li>
+                <li><a href="{{ url_for('admin_login') }}">Admin Login</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="about-us">
+        <div class="container">
+            <div class="section-title">
+                <h1>About Campus Eats</h1>
+                <p>Making MET College Canteen Smarter & Easier <b>From</b> </p>
+            </div>
+
+            <div class="carousel-container">
+                {%- for i in range(1, 9) %}
+                <div class="carousel-slide {% if i == 1 %}active{% endif %}">
+                    <img src="{{ url_for('static', filename=('images/image' ~ i ~ '.jpg')) }}" alt="Canteen image {{ i }}">
+                </div>
+                {%- endfor %}
+            </div>
+
+            <div class="about-grid">
+                <div class="about-card">
+                    <h2>🤔 The Problem</h2>
+                    <p>College canteens face numerous challenges:</p>
+                    <ul style="color: var(--text-secondary); margin: 1rem 0; padding-left: 1.5rem;">
+                        <li>Long queues during peak hours</li>
+                        <li>Limited time for students between classes</li>
+                        <li>Difficulty in managing bulk orders</li>
+                        <li>Inefficient order tracking system</li>
+                        <li>Payment hassles and cash management</li>
+                        <li>No way to collect student feedback</li>
+                    </ul>
+                    <p>These issues lead to wasted time, confusion, and frustration for both students and staff.</p>
+                </div>
+                <div class="about-card">
+                    <h2>💡 Our Solution</h2>
+                    <p>Campus Eats revolutionizes college food ordering:</p>
+                    <ul style="color: var(--text-secondary); margin: 1rem 0; padding-left: 1.5rem;">
+                        <li>Digital menu with real-time availability</li>
+                        <li>Quick online ordering & payment</li>
+                        <li>Priority system for staff members</li>
+                        <li>Scheduled & bulk order options</li>
+                        <li>Real-time order tracking</li>
+                        <li>Rating & feedback system</li>
+                        <li>Subscription plans with discounts</li>
+                        <li>Dedicated support system</li>
+                    </ul>
+                    <p>Making campus dining efficient, organized, and enjoyable for everyone.</p>
+                </div>
+            </div>
+
+            <div style="margin-top: 4rem; text-align: center;">
+                <h2 style="color: var(--primary-color); margin-bottom: 2rem;">Our Vision</h2>
+                <p style="color: var(--text-secondary); max-width: 800px; margin: 0 auto; line-height: 1.8;">
+                    At Campus Eats, we envision a future where college dining is seamless, efficient, and enjoyable. 
+                    Our platform bridges the gap between traditional canteen operations and modern technology, 
+                    creating a better experience for both students and staff. We're committed to continuous 
+                    improvement and innovation in campus food service management.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <footer style="background: #1a1a1a; color: white; text-align: center; padding: 2rem; margin-top: 4rem;">
+        <div class="container">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; text-align: left; margin-bottom: 2rem;">
+                <div>
+                    <h4 style="color: var(--primary-color); margin-bottom: 1rem;">Campus Eats</h4>
+                    <p style="color: #888; line-height: 1.6;">Making college dining smarter, faster, and more enjoyable for everyone.</p>
+                </div>
+                <div>
+                    <h4 style="color: var(--primary-color); margin-bottom: 1rem;">Quick Links</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="margin-bottom: 0.5rem;"><a href="{{ url_for('login') }}" style="color: #888; text-decoration: none;">Login</a></li>
+                        <li style="margin-bottom: 0.5rem;"><a href="{{ url_for('signup') }}" style="color: #888; text-decoration: none;">Sign Up</a></li>
+                        <li style="margin-bottom: 0.5rem;"><a href="{{ url_for('admin_login') }}" style="color: #888; text-decoration: none;">Admin Portal</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 style="color: var(--primary-color); margin-bottom: 1rem;">Contact</h4>
+                    <p style="color: #888; line-height: 1.6;">Email: support@campuseats.com<br>Phone: (+91) 9021220868</p>
+                </div>
+            </div>
+            <div style="border-top: 1px solid #333; padding-top: 2rem;">
+                <p>&copy; 2025 CampusEats. All rights reserved.</p>
+                <p style="margin-top: 0.5rem; font-size: 0.9rem;">Made with ❤️ for college students</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Carousel Animation with safety checks and pause-on-hover
+        function initCarousel() {
+            const slides = Array.from(document.querySelectorAll('.carousel-slide'));
+            if (!slides || slides.length === 0) return; // nothing to do
+
+            let currentSlide = slides.findIndex(s => s.classList.contains('active'));
+            if (currentSlide === -1) currentSlide = 0;
+
+            function showSlide(index) {
+                slides.forEach((slide, idx) => {
+                    slide.classList.toggle('active', idx === index);
+                });
+            }
+
+            function nextSlide() {
+                currentSlide = (currentSlide + 1) % slides.length;
+                showSlide(currentSlide);
+            }
+
+            // Auto-rotate only when there's more than one slide
+            let intervalId = null;
+            if (slides.length > 1) {
+                intervalId = setInterval(nextSlide, 2500);
+            }
+
+            // Pause on hover for better UX
+            const container = document.querySelector('.carousel-container');
+            if (container) {
+                container.addEventListener('mouseenter', () => { if (intervalId) clearInterval(intervalId); });
+                container.addEventListener('mouseleave', () => { if (slides.length > 1) intervalId = setInterval(nextSlide, 2500); });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initCarousel);
+    </script>
+</body>
+</html>

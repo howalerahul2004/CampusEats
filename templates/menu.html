@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ session.theme or 'light' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Menu - Campus Eats</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('menu') }}" class="logo">🍔 Campus Eats</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('menu') }}">Menu</a></li>
+                <li><a href="{{ url_for('favorites') }}">Favorites</a></li>
+                <li><a href="{{ url_for('cart') }}">Cart 🛒</a></li>
+                <li><a href="{{ url_for('orders') }}">My Orders</a></li>
+                {% if session.user_id %}
+                <li><a href="{{ url_for('helpdesk') }}">Help Desk</a></li>
+                {% endif %}
+                <li><a href="{{ url_for('subscription') }}">Premium</a></li>
+                <li><a href="{{ url_for('profile') }}">Profile</a></li>
+                <li>
+                    <div class="notification-bell" onclick="toggleNotifications()" style="position: relative; cursor: pointer;">
+                        🔔
+                        <span class="notification-badge" id="notification-count" style="display: none;">0</span>
+                    </div>
+                    <div class="notification-dropdown" id="notification-dropdown">
+                        <div style="padding: 1rem; border-bottom: 1px solid var(--border); font-weight: bold;">
+                            Notifications
+                        </div>
+                        <div id="notification-list"></div>
+                        <div style="padding: 1rem; text-align: center; border-top: 1px solid var(--border);">
+                            <a href="{{ url_for('notifications') }}" class="btn btn-small btn-primary">View All</a>
+                        </div>
+                    </div>
+                </li>
+                <li><button class="theme-toggle" onclick="toggleTheme()"><span id="theme-icon">🌙</span></button></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                <!-- <li><a href="{{ url_for('logout') }}" style="text-decoration: underline; color: red;">Logout</a></li> -->
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>Browse Menu</h1>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <span>Welcome, <strong>{{ session.user_name }}</strong>!</span>
+                {% if session.user_type == 'staff' %}
+                <span class="priority-badge">HIGH PRIORITY</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="search-filter-bar">
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Search for food..." oninput="searchFood()">
+                <span class="search-icon">🔍</span>
+            </div>
+            
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="filterByCategory('all')" data-category="all">All</button>
+                {% for category in categories %}
+                <button class="filter-btn" onclick="filterByCategory('{{ category.category_name }}')" data-category="{{ category.category_name }}">
+                    {{ category.category_name }}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div id="message" style="display: none; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;"></div>
+
+        <div class="food-grid" id="food-grid">
+            {% for food in foods %}
+            <div class="food-card {% if food.is_special %}special{% endif %}" data-category="{{ food.category_name }}" data-name="{{ food.name|lower }}">
+                {% if food.is_special %}
+                <span class="special-badge">⭐ TODAY'S SPECIAL</span>
+                {% endif %}
+                
+                <img src="{{ food.image_url }}" alt="{{ food.name }}" class="food-image" 
+                     onerror="this.src='/static/images/placeholder.jpg'">
+                
+                <div class="food-info">
+                    <span class="category-badge">{{ food.category_name }}</span>
+                    <h3 class="food-name">{{ food.name }}</h3>
+                    <p class="food-description">{{ food.description }}</p>
+                    
+                    {% if food.avg_rating > 0 %}
+                    <div class="food-rating">
+                        <span class="stars">
+                            {% for i in range(food.avg_rating|int) %}⭐{% endfor %}
+                        </span>
+                        <span style="color: var(--text-secondary);">
+                            {{ "%.1f"|format(food.avg_rating) }} ({{ food.total_ratings }})
+                        </span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="food-footer">
+                        <span class="food-price">₹{{ food.price }}</span>
+                        <div class="food-actions">
+                            <button class="favorite-btn {% if food.food_id in favorites %}active{% endif %}" 
+                                    onclick="toggleFavorite({{ food.food_id }}, this)"
+                                    data-food-id="{{ food.food_id }}">
+                                ❤️
+                            </button>
+                            <button class="btn btn-primary btn-small add-to-cart-btn" data-food-id="{{ food.food_id }}">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if not foods %}
+        <div class="empty-state">
+            <div style="font-size: 4rem;">🍽️</div>
+            <h3>No items available</h3>
+            <p>Check back later for delicious food!</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="{{ url_for('static', filename='js/user.js') }}"></script>
+    <script>
+        function searchFood() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const foodCards = document.querySelectorAll('.food-card');
+            
+            foodCards.forEach(card => {
+                const foodName = card.getAttribute('data-name');
+                const description = card.querySelector('.food-description').textContent.toLowerCase();
+                
+                if (foodName.includes(searchTerm) || description.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        let currentCategory = 'all';
+        function filterByCategory(category) {
+            currentCategory = category;
+            const foodCards = document.querySelectorAll('.food-card');
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            
+            filterBtns.forEach(btn => {
+                if (btn.getAttribute('data-category') === category) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            foodCards.forEach(card => {
+                const cardCategory = card.getAttribute('data-category');
+                
+                if (category === 'all' || cardCategory === category) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        async function toggleFavorite(foodId, button) {
+            try {
+                const formData = new FormData();
+                formData.append('food_id', foodId);
+
+                const response = await fetch('/toggle_favorite', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    button.classList.toggle('active');
+                    showToast(data.message, 'success');
+                } else {
+                    showToast('Failed: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showToast('Error toggling favorite', 'error');
+            }
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            document.getElementById('theme-icon').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            
+            fetch('/toggle_theme', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `theme=${newTheme}`
+            });
+        }
+
+        function toggleNotifications() {
+            const dropdown = document.getElementById('notification-dropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        async function loadNotifications() {
+            try {
+                const response = await fetch('/get_unread_notifications');
+                const data = await response.json();
+                
+                const badge = document.getElementById('notification-count');
+                badge.textContent = data.count;
+                badge.style.display = data.count > 0 ? 'flex' : 'none';
+                
+                const list = document.getElementById('notification-list');
+                list.innerHTML = '';
+                
+                if (data.notifications.length === 0) {
+                    list.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--text-secondary);">No new notifications</div>';
+                } else {
+                    data.notifications.forEach(notif => {
+                        const item = document.createElement('div');
+                        item.className = 'notification-item unread';
+                        item.innerHTML = `
+                            <div class="notification-title">${notif.title}</div>
+                            <div class="notification-message">${notif.message}</div>
+                            <div class="notification-time">${new Date(notif.created_at).toLocaleString()}</div>
+                        `;
+                        item.onclick = () => markAsRead(notif.notification_id);
+                        list.appendChild(item);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading notifications:', error);
+            }
+        }
+
+        async function markAsRead(notificationId) {
+            try {
+                await fetch(`/mark_notification_read/${notificationId}`, { method: 'POST' });
+                loadNotifications();
+            } catch (error) {
+                console.error('Error marking notification as read:', error);
+            }
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.style.background = type === 'success' ? '#d4edda' : '#f8d7da';
+            toast.style.color = type === 'success' ? '#155724' : '#721c24';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        const savedTheme = '{{ session.theme }}' || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('theme-icon').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+        window.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('notification-dropdown');
+            const bell = document.querySelector('.notification-bell');
+            if (bell && !bell.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadNotifications();
+            setInterval(loadNotifications, 30000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ session.theme or 'light' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription - Campus Eats</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('menu') }}" class="logo">🍔 Campus Eats</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('menu') }}">Menu</a></li>
+                <li><a href="{{ url_for('subscription') }}">Subscription</a></li>
+                <li><a href="{{ url_for('orders') }}">My Orders</a></li>
+                {% if session.user_id %}
+                <li><a href="{{ url_for('helpdesk') }}">Help Desk</a></li>
+                {% endif %}
+                <li><button class="theme-toggle" onclick="toggleTheme()"><span id="theme-icon">🌙</span></button></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 style="text-align: center; margin-bottom: 3rem;">💳 Subscription Plans</h1>
+
+        {% if subscription and subscription.status == 'active' %}
+        <!-- Active Subscription -->
+        <div class="subscription-card" style="background: linear-gradient(135deg, #28a745, #20c997);">
+            <h2>✅ Your Subscription is Active!</h2>
+            <p style="font-size: 1.2rem; margin: 1rem 0;">
+                Enjoying 10% discount on all orders
+            </p>
+            <div style="background: rgba(255,255,255,0.2); padding: 1.5rem; border-radius: 10px; margin: 1.5rem 0;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; text-align: left;">
+                    <div>
+                        <p style="opacity: 0.9; margin-bottom: 0.5rem;">Start Date</p>
+                        <p style="font-size: 1.2rem; font-weight: bold;">
+                            {{ subscription.start_date.strftime('%B %d, %Y') }}
+                        </p>
+                    </div>
+                    <div>
+                        <p style="opacity: 0.9; margin-bottom: 0.5rem;">Expires On</p>
+                        <p style="font-size: 1.2rem; font-weight: bold;">
+                            {{ subscription.end_date.strftime('%B %d, %Y') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <p style="font-size: 0.9rem; opacity: 0.9;">
+                Your subscription will auto-renew. Cancel anytime from settings.
+            </p>
+        </div>
+        
+        {% else %}
+        <!-- Subscribe Now -->
+        <div class="subscription-card">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🌟</div>
+            <h2>Campus Eats Premium</h2>
+            <div class="subscription-price">
+                ₹299
+                <span style="font-size: 1.5rem; font-weight: normal;">/month</span>
+            </div>
+            
+            <ul class="subscription-features">
+                <li>✅ 10% discount on all orders</li>
+                <li>✅ Priority order processing</li>
+                <li>✅ Free delivery (always)</li>
+                <li>✅ Early access to new menu items</li>
+                <li>✅ No minimum order value</li>
+                <li>✅ Exclusive deals and offers</li>
+                <li>✅ Birthday special discount</li>
+            </ul>
+
+            <div style="background: rgba(255,255,255,0.2); padding: 1.5rem; border-radius: 10px; margin: 2rem 0;">
+                <h3 style="margin-bottom: 1rem;">💰 Save Money!</h3>
+                <p style="font-size: 1.1rem; line-height: 1.6;">
+                    If you order food 3+ times a week,<br>
+                    you'll save <strong>₹100-200</strong> every month!
+                </p>
+            </div>
+
+            <form method="POST" action="{{ url_for('subscribe') }}" onsubmit="return confirm('Activate monthly subscription for ₹299?')">
+                <button type="submit" class="btn" style="background: white; color: var(--primary-color); width: 100%; padding: 1.5rem; font-size: 1.2rem; font-weight: bold;">
+                    Subscribe Now - ₹299/month
+                </button>
+            </form>
+
+            <p style="margin-top: 1.5rem; font-size: 0.9rem; opacity: 0.9;">
+                🔒 Secure payment | Cancel anytime | No hidden charges
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- Benefits Comparison -->
+        <div style="max-width: 900px; margin: 3rem auto;">
+            <h2 style="text-align: center; margin-bottom: 2rem;">Compare Plans</h2>
+            
+            <div style="background: var(--card-bg); border-radius: 10px; padding: 2rem; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border);">
+                            <th style="text-align: left; padding: 1rem;">Feature</th>
+                            <th style="text-align: center; padding: 1rem; color: var(--text-secondary);">Regular</th>
+                            <th style="text-align: center; padding: 1rem; color: var(--primary-color);">Premium</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 1rem;">Order Discount</td>
+                            <td style="text-align: center; padding: 1rem;">0%</td>
+                            <td style="text-align: center; padding: 1rem; font-weight: bold; color: var(--success);">10%</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 1rem;">Delivery Fee</td>
+                            <td style="text-align: center; padding: 1rem;">Free</td>
+                            <td style="text-align: center; padding: 1rem; font-weight: bold;">Free</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 1rem;">Priority Processing</td>
+                            <td style="text-align: center; padding: 1rem;">❌</td>
+                            <td style="text-align: center; padding: 1rem;">✅</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 1rem;">Early Menu Access</td>
+                            <td style="text-align: center; padding: 1rem;">❌</td>
+                            <td style="text-align: center; padding: 1rem;">✅</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 1rem;">Exclusive Offers</td>
+                            <td style="text-align: center; padding: 1rem;">❌</td>
+                            <td style="text-align: center; padding: 1rem;">✅</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 1rem; font-weight: bold;">Monthly Cost</td>
+                            <td style="text-align: center; padding: 1rem;">₹0</td>
+                            <td style="text-align: center; padding: 1rem; font-weight: bold; color: var(--primary-color);">₹299</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- FAQs -->
+        <div style="max-width: 800px; margin: 3rem auto;">
+            <h2 style="text-align: center; margin-bottom: 2rem;">Frequently Asked Questions</h2>
+            
+            <div style="background: var(--card-bg); border-radius: 10px; padding: 2rem; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--primary-color); margin-bottom: 0.5rem;">How does the discount work?</h4>
+                    <p style="color: var(--text-secondary);">
+                        You get an automatic 10% discount on every order during your subscription period. 
+                        The discount is applied at checkout.
+                    </p>
+                </div>
+                
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--primary-color); margin-bottom: 0.5rem;">Can I cancel anytime?</h4>
+                    <p style="color: var(--text-secondary);">
+                        Yes! You can cancel your subscription anytime. You'll continue to enjoy benefits 
+                        until the end of your current billing period.
+                    </p>
+                </div>
+                
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--primary-color); margin-bottom: 0.5rem;">Is it worth it?</h4>
+                    <p style="color: var(--text-secondary);">
+                        If you order food 3 or more times per week, you'll definitely save money! 
+                        For example, if you spend ₹500/week, you save ₹200/month with the 10% discount.
+                    </p>
+                </div>
+                
+                <div>
+                    <h4 style="color: var(--primary-color); margin-bottom: 0.5rem;">How do I pay?</h4>
+                    <p style="color: var(--text-secondary);">
+                        We accept all major payment methods including UPI, cards, and wallets. 
+                        Your subscription will auto-renew monthly.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            document.getElementById('theme-icon').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            
+            fetch('/toggle_theme', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `theme=${newTheme}`
+            });
+        }
+
+        // Initialize theme
+        const savedTheme = '{{ session.theme }}' || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('theme-icon').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    </script>
+</body>
+</html>

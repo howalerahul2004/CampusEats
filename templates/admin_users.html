@@ -1,0 +1,144 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('admin_dashboard') }}" class="logo">🍔 Campus Eats - Admin</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('admin_foods') }}">Manage Food</a></li>
+                <li><a href="{{ url_for('admin_orders') }}">Orders</a></li>
+                <li><a href="{{ url_for('admin_users') }}">Users</a></li>
+                <li><a href="{{ url_for('admin_logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 style="margin-bottom: 2rem;">Manage Users</h1>
+
+        <!-- Search and Filters -->
+        <div class="search-filters" style="background: var(--card-bg); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <div class="form-group" style="margin: 0;">
+                    <input type="text" id="searchUser" class="form-control" placeholder="Search by name, email, phone..." oninput="filterUsers()">
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <select id="userTypeFilter" class="form-control" onchange="filterUsers()">
+                        <option value="">All User Types</option>
+                        <option value="student">Students</option>
+                        <option value="staff">Staff</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <select id="sortBy" class="form-control" onchange="filterUsers()">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="name">Sort by Name</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>User Type</th>
+                        <th>Registered</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.user_id }}</td>
+                        <td>{{ user.name }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.phone }}</td>
+                        <td class="user-type">{{ user.user_type.title() }}</td>
+                        <td>{{ user.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <a href="{{ url_for('delete_user', user_id=user.user_id) }}" 
+                               class="btn btn-danger btn-small"
+                               onclick="return confirm('Delete this user?')">Delete</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if not users %}
+        <div class="empty-state">
+            <div style="font-size: 4rem;">👥</div>
+            <h3>No users registered</h3>
+            <p>Users will appear here once they sign up.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function filterUsers() {
+            const searchText = document.getElementById('searchUser').value.toLowerCase();
+            const userType = document.getElementById('userTypeFilter').value;
+            const sortBy = document.getElementById('sortBy').value;
+            const rows = Array.from(document.querySelector('tbody').getElementsByTagName('tr'));
+            
+            // Filter rows
+            rows.forEach(row => {
+                const name = row.cells[1].textContent.toLowerCase();
+                const email = row.cells[2].textContent.toLowerCase();
+                const phone = row.cells[3].textContent.toLowerCase();
+                const userTypeCell = row.querySelector('.user-type').textContent.toLowerCase();
+                
+                const matchesSearch = name.includes(searchText) || 
+                                    email.includes(searchText) || 
+                                    phone.includes(searchText);
+                const matchesType = !userType || userTypeCell === userType.toLowerCase();
+                
+                row.style.display = matchesSearch && matchesType ? '' : 'none';
+            });
+            
+            // Sort visible rows
+            const visibleRows = rows.filter(row => row.style.display !== 'none');
+            visibleRows.sort((a, b) => {
+                const getDateValue = row => new Date(row.cells[5].textContent.split('/').reverse().join('-'));
+                
+                switch(sortBy) {
+                    case 'oldest':
+                        return getDateValue(a) - getDateValue(b);
+                    case 'name':
+                        return a.cells[1].textContent.localeCompare(b.cells[1].textContent);
+                    default: // newest
+                        return getDateValue(b) - getDateValue(a);
+                }
+            });
+            
+            // Reorder rows
+            const tbody = document.querySelector('tbody');
+            visibleRows.forEach(row => tbody.appendChild(row));
+        }
+    </script>
+</body>
+</html>

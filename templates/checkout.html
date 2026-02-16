@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ session.theme or 'light' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - Campus Eats</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('menu') }}" class="logo">🍔 Campus Eats</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('menu') }}">Menu</a></li>
+                <li><a href="{{ url_for('cart') }}">Cart</a></li>
+                {% if session.user_id %}
+                <li><a href="{{ url_for('helpdesk') }}">Help Desk</a></li>
+                {% endif %}
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 style="margin-bottom: 2rem;">Checkout</h1>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+            <!-- Order Details -->
+            <div class="cart-container">
+                <h2 style="margin-bottom: 1.5rem;">Order Summary</h2>
+                
+                {% for item in cart_items %}
+                <div class="cart-item">
+                    <img src="{{ item.image_url if item.image_url else '/static/images/placeholder.jpg' }}" 
+                         alt="{{ item.name }}" class="cart-image">
+                    <div class="cart-details">
+                        <h3 class="cart-name">{{ item.name }}</h3>
+                        <p class="cart-price">₹{{ item.price }} x {{ item.quantity }}</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <p style="font-size: 1.2rem; font-weight: bold;">₹{{ item.subtotal }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Payment & Order Options -->
+            <div>
+                <div class="cart-container">
+                    <h2 style="margin-bottom: 1.5rem;">Order Details</h2>
+                    
+                    <form method="POST" action="{{ url_for('checkout') }}" id="checkout-form">
+                        <!-- Order Type -->
+                        <div class="form-group">
+                            <label for="order_type">Order Type</label>
+                            <select name="order_type" id="order_type" class="form-control" onchange="toggleSchedule()">
+                                <option value="immediate">Order Now</option>
+                                <option value="scheduled">Schedule for Later</option>
+                            </select>
+                        </div>
+
+                        <!-- Schedule Fields -->
+                        <div id="schedule-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="scheduled_date">Select Date</label>
+                                <input type="date" name="scheduled_date" id="scheduled_date" 
+                                       class="form-control" min="{{ today }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="scheduled_time">Select Time</label>
+                                <input type="time" name="scheduled_time" id="scheduled_time" 
+                                       class="form-control">
+                            </div>
+                        </div>
+
+                        <!-- Bulk Order -->
+                        <div class="form-group">
+                            <label for="is_bulk_order">Is this for a campus event?</label>
+                            <select name="is_bulk_order" id="is_bulk_order" class="form-control" onchange="toggleEventName()">
+                                <option value="no">No</option>
+                                <option value="yes">Yes (Bulk Order)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="event-name-field" style="display: none;">
+                            <label for="event_name">Event Name</label>
+                            <input type="text" name="event_name" id="event_name" 
+                                   class="form-control" placeholder="e.g., Annual Day Function">
+                            <small style="color: var(--text-secondary);">
+                                Large orders get special attention!
+                            </small>
+                        </div>
+
+                        <!-- Payment Method -->
+                        <div class="form-group">
+                            <label for="payment_method">Payment Method</label>
+                            <select name="payment_method" id="payment_method" class="form-control" required>
+                                <option value="Cash">Cash on Pickup</option>
+                                <option value="UPI">UPI Payment</option>
+                                <option value="Card">Debit/Credit Card</option>
+                                <option value="Wallet">Digital Wallet</option>
+                            </select>
+                        </div>
+
+                        <!-- Special Instructions -->
+                        <div class="form-group">
+                            <label for="special_instructions">Special Instructions (optional)</label>
+                            <textarea name="special_instructions" id="special_instructions" class="form-control" rows="3" placeholder="e.g., less sugar, extra spicy, no onions"></textarea>
+                        </div>
+
+                        <!-- Price Breakdown -->
+                        <div class="cart-summary">
+                            <div class="summary-row">
+                                <span>Subtotal:</span>
+                                <span>₹{{ total }}</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>Delivery Fee:</span>
+                                <span style="color: var(--success);">Free</span>
+                            </div>
+                            {% if session.get('subscription_status') == 'active' %}
+                            <div class="summary-row" style="color: var(--success);">
+                                <span>Subscription Discount (10%):</span>
+                                <span>-₹{{ (total * 0.1)|round(2) }}</span>
+                            </div>
+                            <div class="summary-row summary-total">
+                                <span>Total:</span>
+                                <span>₹{{ (total * 0.9)|round(2) }}</span>
+                            </div>
+                            {% else %}
+                            <div class="summary-row summary-total">
+                                <span>Total:</span>
+                                <span>₹{{ total }}</span>
+                            </div>
+                            <div style="margin-top: 1rem; padding: 1rem; background: #fff3cd; border-radius: 5px; text-align: center;">
+                                <p style="margin: 0; color: #856404;">
+                                    💡 Get 10% discount with our monthly subscription!
+                                    <br>
+                                    <a href="{{ url_for('subscription') }}" style="color: var(--primary-color); font-weight: 600;">
+                                        Subscribe Now
+                                    </a>
+                                </p>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <button type="submit" class="btn btn-success" style="width: 100%; padding: 1rem; font-size: 1.1rem; margin-top: 1rem;">
+                            Place Order - ₹{{ (total * 0.9)|round(2) if session.get('subscription_status') == 'active' else total }}
+                        </button>
+                        
+                        <p style="text-align: center; margin-top: 1rem; color: var(--text-secondary); font-size: 0.9rem;">
+                            🔒 Secure payment simulation
+                        </p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSchedule() {
+            const orderType = document.getElementById('order_type').value;
+            const scheduleFields = document.getElementById('schedule-fields');
+            const dateInput = document.getElementById('scheduled_date');
+            const timeInput = document.getElementById('scheduled_time');
+            
+            if (orderType === 'scheduled') {
+                scheduleFields.style.display = 'block';
+                dateInput.required = true;
+                timeInput.required = true;
+            } else {
+                scheduleFields.style.display = 'none';
+                dateInput.required = false;
+                timeInput.required = false;
+            }
+        }
+
+        function toggleEventName() {
+            const isBulk = document.getElementById('is_bulk_order').value;
+            const eventNameField = document.getElementById('event-name-field');
+            const eventNameInput = document.getElementById('event_name');
+            
+            if (isBulk === 'yes') {
+                eventNameField.style.display = 'block';
+                eventNameInput.required = true;
+            } else {
+                eventNameField.style.display = 'none';
+                eventNameInput.required = false;
+            }
+        }
+
+        // Set minimum date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('scheduled_date').setAttribute('min', today);
+
+        // Form validation
+        document.getElementById('checkout-form').addEventListener('submit', function(e) {
+            const orderType = document.getElementById('order_type').value;
+            
+            if (orderType === 'scheduled') {
+                const date = document.getElementById('scheduled_date').value;
+                const time = document.getElementById('scheduled_time').value;
+                
+                if (!date || !time) {
+                    e.preventDefault();
+                    alert('Please select date and time for scheduled order');
+                    return false;
+                }
+            }
+        });
+
+        // Initialize theme
+        const savedTheme = '{{ session.theme }}' || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+</body>
+</html>

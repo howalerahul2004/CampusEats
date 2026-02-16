@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ session.theme or 'light' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications - Campus Eats</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('menu') }}" class="logo">🍔 Campus Eats</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('menu') }}">Menu</a></li>
+                <li><a href="{{ url_for('orders') }}">My Orders</a></li>
+                {% if session.user_id %}
+                <li><a href="{{ url_for('helpdesk') }}">Help Desk</a></li>
+                {% endif %}
+                <li><a href="{{ url_for('notifications') }}">Notifications</a></li>
+                <li><button class="theme-toggle" onclick="toggleTheme()"><span id="theme-icon">🌙</span></button></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>🔔 Notifications</h1>
+            <div style="display:flex; gap:0.75rem; align-items:center;">
+                {% if notifications %}
+                <span style="color: var(--text-secondary);">{{ notifications|length }} notifications</span>
+                <button id="clear-all-btn" class="btn btn-danger btn-small" onclick="clearAllNotifications()" title="Clear all notifications">Clear All</button>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if notifications %}
+        <div style="background: var(--card-bg); border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+            {% for notif in notifications %}
+            <div class="notification-item {% if not notif.is_read %}unread{% endif %}" 
+                 style="cursor: pointer; padding: 1.5rem; border-bottom: 1px solid var(--border);" 
+                 onclick="markAsRead({{ notif.notification_id }})">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div style="flex: 1;">
+                        <div class="notification-title" style="font-weight: 600; margin-bottom: 0.5rem; color: var(--text-color);">
+                            {% if notif.type == 'order' %}🍔{% elif notif.type == 'payment' %}💳{% else %}📢{% endif %}
+                            {{ notif.title }}
+                        </div>
+                        <div class="notification-message" style="color: var(--text-secondary); margin-bottom: 0.5rem;">
+                            {{ notif.message }}
+                        </div>
+                        <div class="notification-time" style="font-size: 0.85rem; color: var(--text-secondary);">
+                            {{ notif.created_at.strftime('%B %d, %Y at %I:%M %p') }}
+                        </div>
+                    </div>
+                    {% if not notif.is_read %}
+                    <span style="width: 10px; height: 10px; background: var(--primary-color); border-radius: 50%; margin-top: 0.5rem; flex-shrink: 0; margin-left: 1rem;"></span>
+                    {% endif %}
+                </div>
+                
+                {% if notif.order_id %}
+                <div style="margin-top: 1rem;">
+                    <a href="{{ url_for('orders') }}" class="btn btn-small btn-secondary" onclick="event.stopPropagation();">
+                        View Order #{{ notif.order_id }}
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div style="font-size: 4rem;">🔕</div>
+            <h3>No notifications</h3>
+            <p>You're all caught up!</p>
+            <a href="{{ url_for('menu') }}" class="btn btn-primary" style="margin-top: 1rem;">Browse Menu</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        async function markAsRead(notificationId) {
+            try {
+                await fetch(`/mark_notification_read/${notificationId}`, {
+                    method: 'POST'
+                });
+                location.reload();
+            } catch (error) {
+                console.error('Error marking as read:', error);
+            }
+        }
+
+        async function clearAllNotifications() {
+            if (!confirm('Clear all notifications?')) return;
+            try {
+                const resp = await fetch('/clear_notifications', { method: 'POST' });
+                const data = await resp.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Failed to clear notifications');
+                }
+            } catch (err) {
+                console.error('Error clearing notifications:', err);
+                alert('Error clearing notifications');
+            }
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            document.getElementById('theme-icon').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            
+            fetch('/toggle_theme', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `theme=${newTheme}`
+            });
+        }
+
+        // Initialize theme
+        const savedTheme = '{{ session.theme }}' || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('theme-icon').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    </script>
+</body>
+</html>

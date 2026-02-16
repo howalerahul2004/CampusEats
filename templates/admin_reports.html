@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Reports - Admin</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('admin_dashboard') }}" class="logo">🍔 Campus Eats - Admin</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('admin_foods') }}">Manage Food</a></li>
+                <li><a href="{{ url_for('admin_orders') }}">Orders</a></li>
+                <li><a href="{{ url_for('admin_users') }}">Users</a></li>
+                <li><a href="{{ url_for('admin_helpdesk') }}">Help Desk</a></li>
+                <li><a href="{{ url_for('admin_reports') }}">Reports</a></li>
+                <li><a href="{{ url_for('admin_logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 style="margin-bottom: 2rem;">📊 Generate Reports</h1>
+        
+        <!-- Analytics Charts -->
+        <div style="margin-bottom: 3rem;">
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                <button onclick="loadChartData(7)" class="btn btn-primary">Last 7 Days</button>
+                <button onclick="loadChartData(30)" class="btn btn-primary">Last 30 Days</button>
+                <button onclick="loadChartData(90)" class="btn btn-primary">Last 90 Days</button>
+            </div>
+            
+            <!-- Charts Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                <!-- Orders Chart -->
+                <div class="cart-container">
+                    <h3 style="margin-bottom: 1rem;">Orders Trend</h3>
+                    <canvas id="ordersChart"></canvas>
+                </div>
+                
+                <!-- Revenue Chart -->
+                <div class="cart-container">
+                    <h3 style="margin-bottom: 1rem;">Revenue Trend</h3>
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <!-- Popular Items Chart -->
+                <div class="cart-container">
+                    <h3 style="margin-bottom: 1rem;">Popular Items</h3>
+                    <canvas id="popularItemsChart"></canvas>
+                </div>
+                
+                <!-- Order Status Distribution -->
+                <div class="cart-container">
+                    <h3 style="margin-bottom: 1rem;">Order Status Distribution</h3>
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <!-- Report Generator -->
+            <div class="cart-container">
+                <h2 style="margin-bottom: 1.5rem;">Report Configuration</h2>
+                
+                <form method="POST" action="{{ url_for('generate_report') }}" id="report-form">
+                    <div class="form-group">
+                        <label for="report_type">Report Period <span style="color: red;">*</span></label>
+                        <select name="report_type" id="report_type" class="form-control" required>
+                            <option value="">Select Period</option>
+                            <option value="daily">📅 Daily Report (Today)</option>
+                            <option value="weekly">📊 Weekly Report (Last 7 days)</option>
+                            <option value="monthly">📈 Monthly Report (Last 30 days)</option>
+                            <option value="quarterly">📉 Quarterly Report (Last 90 days)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="format">Export Format <span style="color: red;">*</span></label>
+                        <select name="format" id="format" class="form-control" required>
+                            <option value="">Select Format</option>
+                            <option value="json">{ } JSON (View in Browser)</option>
+                            <option value="pdf">📄 PDF Document</option>
+                            <option value="excel">📊 Excel Spreadsheet (.xlsx)</option>
+                        </select>
+                    </div>
+                    
+                    <div style="background: #e3f2fd; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0;">
+                        <strong style="color: #1976d2; display: block; margin-bottom: 1rem;">📝 Report Includes:</strong>
+                        <ul style="margin: 0; color: #1976d2; list-style: none; padding-left: 0;">
+                            <li style="padding: 0.3rem 0;">✓ Total Orders & Revenue</li>
+                            <li style="padding: 0.3rem 0;">✓ Average Order Value</li>
+                            <li style="padding: 0.3rem 0;">✓ Daily Breakdown Analysis</li>
+                            <li style="padding: 0.3rem 0;">✓ Top-Selling Food Items</li>
+                            <li style="padding: 0.3rem 0;">✓ Customer Statistics</li>
+                            <li style="padding: 0.3rem 0;">✓ Order Status Analysis</li>
+                        </ul>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 1.1rem;">
+                        📥 Generate Report
+                    </button>
+                </form>
+            </div>
+
+            <!-- Report Types Info -->
+            <div>
+                <h2 style="margin-bottom: 1.5rem;">Report Types</h2>
+                
+                <div class="order-card" style="margin-bottom: 1rem;">
+                    <h4 style="color: var(--primary-color); margin-bottom: 0.5rem;">📅 Daily Report</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6;">
+                        Summary of today's orders, revenue, and performance metrics. Perfect for daily operations review and quick insights.
+                    </p>
+                </div>
+                
+                <div class="order-card" style="margin-bottom: 1rem;">
+                    <h4 style="color: var(--primary-color); margin-bottom: 0.5rem;">📊 Weekly Report</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6;">
+                        Last 7 days analysis with trends, patterns, and week-over-week comparisons. Ideal for weekly planning and strategy.
+                    </p>
+                </div>
+                
+                <div class="order-card" style="margin-bottom: 1rem;">
+                    <h4 style="color: var(--primary-color); margin-bottom: 0.5rem;">📈 Monthly Report</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6;">
+                        30-day comprehensive report with detailed analytics and insights. Best for monthly reviews and decision making.
+                    </p>
+                </div>
+                
+                <div class="order-card">
+                    <h4 style="color: var(--primary-color); margin-bottom: 0.5rem;">📉 Quarterly Report</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6;">
+                        90-day report for long-term analysis, budget planning, and strategic business decisions.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div style="margin-top: 3rem;">
+            <h2 style="margin-bottom: 1.5rem; text-align: center;">Quick Analytics Overview</h2>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+                <div class="stat-card">
+                    <div class="stat-value" style="font-size: 3rem;">📊</div>
+                    <div class="stat-label" style="font-weight: 600; margin-top: 0.5rem;">Sales Analysis</div>
+                    <p style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-secondary);">
+                        Track revenue trends and patterns
+                    </p>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-value" style="font-size: 3rem;">🍕</div>
+                    <div class="stat-label" style="font-weight: 600; margin-top: 0.5rem;">Top Items</div>
+                    <p style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-secondary);">
+                        Best-selling food items
+                    </p>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-value" style="font-size: 3rem;">👥</div>
+                    <div class="stat-label" style="font-weight: 600; margin-top: 0.5rem;">Customer Insights</div>
+                    <p style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-secondary);">
+                        User behavior analysis
+                    </p>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-value" style="font-size: 3rem;">⏱️</div>
+                    <div class="stat-label" style="font-weight: 600; margin-top: 0.5rem;">Order Times</div>
+                    <p style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-secondary);">
+                        Peak hours & patterns
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Formats Info -->
+        <div style="margin-top: 3rem; padding: 2rem; background: var(--card-bg); border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+            <h2 style="margin-bottom: 1.5rem; text-align: center;">Export Format Options</h2>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;">
+                <div style="text-align: center; padding: 1.5rem;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">{ }</div>
+                    <h4 style="color: var(--primary-color); margin-bottom: 0.75rem;">JSON Format</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6;">
+                        View data directly in browser, easy to integrate with other systems, perfect for developers and API integration
+                    </p>
+                </div>
+                
+                <div style="text-align: center; padding: 1.5rem;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📄</div>
+                    <h4 style="color: var(--primary-color); margin-bottom: 0.75rem;">PDF Document</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6;">
+                        Professional documents for printing, presentations, and official records with charts and graphs
+                    </p>
+                </div>
+                
+                <div style="text-align: center; padding: 1.5rem;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+                    <h4 style="color: var(--primary-color); margin-bottom: 0.75rem;">Excel Spreadsheet</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6;">
+                        Spreadsheets for detailed analysis, custom charts, pivot tables, and advanced calculations
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('report-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const format = formData.get('format');
+            const reportType = formData.get('report_type');
+            
+            // Show loading
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Generating...';
+            submitBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/admin/generate_report', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (format === 'json') {
+                    const data = await response.json();
+                    // Display in new window with formatting
+                    const win = window.open('', '_blank');
+                    win.document.write(`
+                        <html>
+                        <head>
+                            <title>Report - ${reportType}</title>
+                            <style>
+                                body { font-family: monospace; padding: 2rem; background: #f5f5f5; }
+                                pre { background: white; padding: 2rem; border-radius: 8px; overflow: auto; }
+                                h1 { color: #e23744; }
+                            </style>
+                        </head>
+                        <body>
+                            <h1>Report: ${reportType}</h1>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </body>
+                        </html>
+                    `);
+                } else {
+                    // For PDF/Excel, download file
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const extension = format === 'pdf' ? 'pdf' : 'xlsx';
+                    a.download = `campus_eats_report_${reportType}_${new Date().toISOString().split('T')[0]}.${extension}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                }
+                
+                alert('Report generated successfully!');
+            } catch (error) {
+                alert('Error generating report: ' + error.message);
+                console.error('Report generation error:', error);
+            } finally {
+                // Reset button
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+
+    <!-- Charts JavaScript -->
+    <script>
+        // Initialize chart instances
+        let ordersChart = null;
+        let revenueChart = null;
+        let popularItemsChart = null;
+        let statusChart = null;
+
+        // Helper to destroy existing chart if it exists
+        function destroyChart(chart) {
+            if (chart) {
+                chart.destroy();
+            }
+        }
+
+        // Load chart data from API
+        async function loadChartData(days) {
+            // Show loading state
+            document.querySelectorAll('canvas').forEach(canvas => {
+                canvas.style.opacity = '0.5';
+            });
+            
+            try {
+                const response = await fetch(`/admin/chart_data/${days}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                if (!data || !data.success) {
+                    console.error('Invalid data received from API:', data);
+                    throw new Error('Invalid data received from API');
+                }
+
+                // Update Orders Chart
+                destroyChart(ordersChart);
+                const ordersCtx = document.getElementById('ordersChart').getContext('2d');
+                ordersChart = new Chart(ordersCtx, {
+                    type: 'line',
+                    data: {
+                        labels: data.dates,
+                        datasets: [{
+                            label: 'Number of Orders',
+                            data: data.orders,
+                            borderColor: '#e23744',
+                            backgroundColor: 'rgba(226, 55, 68, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: `Orders Trend (Last ${days} Days)`
+                            }
+                        }
+                    }
+                });
+
+                // Update Revenue Chart
+                destroyChart(revenueChart);
+                const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+                revenueChart = new Chart(revenueCtx, {
+                    type: 'line',
+                    data: {
+                        labels: data.dates,
+                        datasets: [{
+                            label: 'Revenue (₹)',
+                            data: data.revenue,
+                            borderColor: '#2196f3',
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: `Revenue Trend (Last ${days} Days)`
+                            }
+                        }
+                    }
+                });
+
+                // Update Popular Items Chart
+                destroyChart(popularItemsChart);
+                const popularCtx = document.getElementById('popularItemsChart').getContext('2d');
+                popularItemsChart = new Chart(popularCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.popular_items.map(item => item.name),
+                        datasets: [{
+                            label: 'Orders',
+                            data: data.popular_items.map(item => item.count),
+                            backgroundColor: 'rgba(76, 175, 80, 0.7)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Most Popular Items'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+
+                // Update Status Distribution Chart
+                destroyChart(statusChart);
+                const statusCtx = document.getElementById('statusChart').getContext('2d');
+                const statusData = data.status_distribution;
+                const statusColors = {
+                    'placed': '#ffc107',
+                    'pending': '#2196f3',
+                    'preparing': '#ff9800',
+                    'ready': '#4caf50',
+                    'completed': '#4caf50',
+                    'cancelled': '#f44336'
+                };
+
+                statusChart = new Chart(statusCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(statusData),
+                        datasets: [{
+                            data: Object.values(statusData),
+                            backgroundColor: Object.keys(statusData).map(status => statusColors[status] || '#757575')
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Order Status Distribution'
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading chart data:', error);
+                alert('Error loading chart data: ' + error.message);
+            } finally {
+                // Remove loading state
+                document.querySelectorAll('canvas').forEach(canvas => {
+                    canvas.style.opacity = '1';
+                });
+            }
+        }
+
+        // Load initial data for last 7 days
+        document.addEventListener('DOMContentLoaded', () => loadChartData(7));
+    </script>
+</body>
+</html>

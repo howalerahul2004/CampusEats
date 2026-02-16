@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Campus Eats</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('admin_dashboard') }}" class="logo">🍔 Campus Eats - Admin</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('admin_foods') }}">Manage Food</a></li>
+                <li><a href="{{ url_for('admin_orders') }}">Orders</a></li>
+                <li><a href="{{ url_for('admin_users') }}">Users</a></li>
+                <li><a href="{{ url_for('admin_helpdesk') }}">Help Desk</a></li>
+                <li><a href="{{ url_for('admin_reports') }}">Reports</a></li>
+                <li><a href="{{ url_for('admin_logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>Admin Dashboard</h1>
+            <span style="color: var(--text-secondary);">Welcome, {{ session.admin_name }}!</span>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.users }}</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.foods }}</div>
+                <div class="stat-label">Available Food Items</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.pending_orders }}</div>
+                <div class="stat-label">Pending Orders</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">₹{{ stats.revenue }}</div>
+                <div class="stat-label">Total Revenue</div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 3rem;">
+            <div style="background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+                <h3 style="margin-bottom: 1rem; color: var(--primary-color);">Quick Actions</h3>
+                <a href="{{ url_for('admin_foods') }}" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem; display: block; text-align: center; text-decoration: none;">
+                    🍕 Manage Food Items
+                </a>
+                <a href="{{ url_for('admin_orders') }}" class="btn btn-secondary" style="width: 100%; margin-bottom: 1rem; display: block; text-align: center; text-decoration: none;">
+                    📦 View Orders
+                </a>
+                <a href="{{ url_for('admin_users') }}" class="btn btn-secondary" style="width: 100%; margin-bottom: 1rem; display: block; text-align: center; text-decoration: none;">
+                    👥 Manage Users
+                </a>
+                <a href="{{ url_for('admin_reports') }}" class="btn btn-info" style="width: 100%; display: block; text-align: center; text-decoration: none;">
+                    📊 Generate Reports
+                </a>
+            </div>
+
+            <div style="background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+                <h3 style="margin-bottom: 1rem; color: var(--primary-color);">System Info</h3>
+                <p style="margin-bottom: 0.5rem;"><strong>Admin:</strong> {{ session.admin_name }}</p>
+                <p style="margin-bottom: 0.5rem;"><strong>Role:</strong> Super Admin</p>
+                <p style="margin-bottom: 0.5rem;"><strong>Status:</strong> <span style="color: var(--success); font-weight: 600;">● Active</span></p>
+                <p style="margin-bottom: 0.5rem;"><strong>Access Level:</strong> Full Control</p>
+            </div>
+
+            <div style="background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+                <h3 style="margin-bottom: 1rem; color: var(--primary-color);">Recent Activity</h3>
+                <ul style="list-style: none; padding: 0;">
+                    <li style="padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
+                        <span style="color: var(--success);">●</span> System running smoothly
+                    </li>
+                    <li style="padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
+                        <span style="color: var(--info);">●</span> {{ stats.pending_orders }} orders pending
+                    </li>
+                    <li style="padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
+                        <span style="color: var(--warning);">●</span> Check help desk for tickets
+                    </li>
+                    <li style="padding: 0.5rem 0;">
+                        <span style="color: var(--primary-color);">●</span> {{ stats.foods }} items in menu
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div style="margin-top: 3rem; padding: 2rem; background: linear-gradient(135deg, #e23744, #ff6b6b); color: white; border-radius: 10px; text-align: center;">
+            <h2 style="margin-bottom: 1rem;">System Features</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                <div>
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">✅</div>
+                    <strong>Order Acceptance</strong>
+                    <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.9;">Accept orders to start timer</p>
+                </div>
+                <div>
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📊</div>
+                    <strong>Advanced Reports</strong>
+                    <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.9;">Daily, Weekly, Monthly stats</p>
+                </div>
+                <div>
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎫</div>
+                    <strong>Help Desk</strong>
+                    <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.9;">Handle customer issues</p>
+                </div>
+                <div>
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🏆</div>
+                    <strong>Priority Queue</strong>
+                    <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.9;">Staff get priority</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

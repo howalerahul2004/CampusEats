@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Food Items - Admin</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('admin_dashboard') }}" class="logo">🍔 Campus Eats - Admin</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('admin_foods') }}">Manage Food</a></li>
+                <li><a href="{{ url_for('admin_orders') }}">Orders</a></li>
+                <li><a href="{{ url_for('admin_users') }}">Users</a></li>
+                <li><a href="{{ url_for('admin_helpdesk') }}">Help Desk</a></li>
+                <li><a href="{{ url_for('admin_reports') }}">Reports</a></li>
+                <li><a href="{{ url_for('admin_logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>Manage Food Items</h1>
+            <button class="btn btn-primary" onclick="openAddModal()">+ Add New Item</button>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="search-filters" style="background: var(--card-bg); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <div class="form-group" style="margin: 0;">
+                    <input type="text" id="searchFood" class="form-control" placeholder="Search by name, category..." oninput="filterFood()">
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <select id="categoryFilter" class="form-control" onchange="filterFood()">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.category_name }}">{{ cat.category_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <select id="availabilityFilter" class="form-control" onchange="filterFood()">
+                        <option value="">All Availability</option>
+                        <option value="available">Available</option>
+                        <option value="unavailable">Not Available</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <select id="sortBy" class="form-control" onchange="filterFood()">
+                        <option value="name">Sort by Name</option>
+                        <option value="price-low">Price (Low to High)</option>
+                        <option value="price-high">Price (High to Low)</option>
+                        <option value="rating">Rating</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Image</th>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Rating</th>
+                        <th>Available</th>
+                        <th>Special</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for food in foods %}
+                    <tr>
+                        <td>{{ food.food_id }}</td>
+                        <td>
+                            <img src="{{ food.image_url }}" alt="{{ food.name }}" 
+                                 style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;"
+                                 onerror="this.src='/static/images/placeholder.jpg'">
+                            <br>
+                            <small style="font-size: 0.75rem; color: var(--text-secondary);">
+                                {{ food.image_type|capitalize }}
+                            </small>
+                        </td>
+                        <td><strong>{{ food.name }}</strong></td>
+                        <td>{{ food.category_name }}</td>
+                        <td><strong>₹{{ food.price }}</strong></td>
+                        <td>
+                            {% if food.avg_rating > 0 %}
+                            <span style="color: var(--warning);">{{ "%.1f"|format(food.avg_rating) }} ⭐</span>
+                            <br>
+                            <small>({{ food.total_ratings }} ratings)</small>
+                            {% else %}
+                            <span style="color: var(--text-secondary);">No ratings</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if food.is_available %}
+                            <span style="color: var(--success); font-weight: 600;">✓ Yes</span>
+                            {% else %}
+                            <span style="color: var(--danger); font-weight: 600;">✗ No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if food.is_special %}
+                            <span style="background: var(--warning); color: var(--dark); padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.85rem;">
+                                ⭐ Today's Special
+                            </span>
+                            {% else %}
+                            <span style="color: var(--text-secondary);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-secondary btn-small" onclick="openEditModal({{ food.food_id }}, '{{ food.name }}', '{{ food.description }}', {{ food.price }}, {{ food.category_id }}, {{ food.is_available }})">
+                                Edit
+                            </button>
+                            <a href="{{ url_for('delete_food', food_id=food.food_id) }}" 
+                               class="btn btn-danger btn-small"
+                               onclick="return confirm('Delete this item?')">
+                                Delete
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Food Modal -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddModal()">&times;</span>
+            <h2>Add New Food Item</h2>
+            <form method="POST" action="{{ url_for('add_food') }}" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label>Name <span style="color: red;">*</span></label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Description <span style="color: red;">*</span></label>
+                    <textarea name="description" class="form-control" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Price (₹) <span style="color: red;">*</span></label>
+                    <input type="number" name="price" step="0.01" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Category <span style="color: red;">*</span></label>
+                    <select name="category_id" class="form-control" required>
+                        {% for cat in categories %}
+                        <option value="{{ cat.category_id }}">{{ cat.category_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Image Source <span style="color: red;">*</span></label>
+                    <select id="image-source" class="form-control" onchange="toggleImageInput()">
+                        <option value="file">Upload from Device</option>
+                        <option value="url">Use Web URL</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="file-input">
+                    <label>Upload Image File</label>
+                    <input type="file" name="image_file" class="form-control" accept="image/*">
+                    <small style="color: var(--text-secondary);">Supported: JPG, PNG (Max 5MB)</small>
+                </div>
+                
+                <div class="form-group" id="url-input" style="display: none;">
+                    <label>Image URL</label>
+                    <input type="text" name="image_url" class="form-control" placeholder="https://example.com/image.jpg">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Add Item</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Food Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2>Edit Food Item</h2>
+            <form method="POST" id="editForm">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" name="name" id="editName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" id="editDescription" class="form-control" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Price (₹)</label>
+                    <input type="number" name="price" id="editPrice" step="0.01" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select name="category_id" id="editCategory" class="form-control" required>
+                        {% for cat in categories %}
+                        <option value="{{ cat.category_id }}">{{ cat.category_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Available</label>
+                    <select name="is_available" id="editAvailable" class="form-control">
+                        <option value="1">Yes</option>
+                        <option value="0">No</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Update Item</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function filterFood() {
+            const searchText = document.getElementById('searchFood').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+            const availability = document.getElementById('availabilityFilter').value;
+            const sortBy = document.getElementById('sortBy').value;
+            const rows = Array.from(document.querySelector('tbody').getElementsByTagName('tr'));
+            
+            // Filter rows
+            rows.forEach(row => {
+                const name = row.cells[2].textContent.toLowerCase();
+                const rowCategory = row.cells[3].textContent;
+                const isAvailable = row.cells[6].textContent.includes('Yes');
+                
+                const matchesSearch = name.includes(searchText) || 
+                                    rowCategory.toLowerCase().includes(searchText);
+                const matchesCategory = !category || rowCategory === category;
+                const matchesAvailability = !availability || 
+                                          (availability === 'available' && isAvailable) ||
+                                          (availability === 'unavailable' && !isAvailable);
+                
+                row.style.display = matchesSearch && matchesCategory && matchesAvailability ? '' : 'none';
+            });
+            
+            // Sort visible rows
+            const visibleRows = rows.filter(row => row.style.display !== 'none');
+            visibleRows.sort((a, b) => {
+                switch(sortBy) {
+                    case 'price-low':
+                        return parseFloat(a.cells[4].textContent.replace('₹', '')) - 
+                               parseFloat(b.cells[4].textContent.replace('₹', ''));
+                    case 'price-high':
+                        return parseFloat(b.cells[4].textContent.replace('₹', '')) - 
+                               parseFloat(a.cells[4].textContent.replace('₹', ''));
+                    case 'rating':
+                        const ratingA = parseFloat(a.cells[5].textContent) || 0;
+                        const ratingB = parseFloat(b.cells[5].textContent) || 0;
+                        return ratingB - ratingA;
+                    default: // name
+                        return a.cells[2].textContent.localeCompare(b.cells[2].textContent);
+                }
+            });
+            
+            // Reorder rows
+            const tbody = document.querySelector('tbody');
+            visibleRows.forEach(row => tbody.appendChild(row));
+        }
+
+        function openAddModal() {
+            document.getElementById('addModal').style.display = 'block';
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').style.display = 'none';
+        }
+
+        function openEditModal(foodId, name, description, price, categoryId, isAvailable) {
+            document.getElementById('editForm').action = `/admin/update_food/${foodId}`;
+            document.getElementById('editName').value = name;
+            document.getElementById('editDescription').value = description;
+            document.getElementById('editPrice').value = price;
+            document.getElementById('editCategory').value = categoryId;
+            document.getElementById('editAvailable').value = isAvailable ? '1' : '0';
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        function toggleImageInput() {
+            const source = document.getElementById('image-source').value;
+            const fileInput = document.getElementById('file-input');
+            const urlInput = document.getElementById('url-input');
+            
+            if (source === 'file') {
+                fileInput.style.display = 'block';
+                urlInput.style.display = 'none';
+                document.querySelector('[name="image_file"]').required = true;
+                document.querySelector('[name="image_url"]').required = false;
+            } else {
+                fileInput.style.display = 'none';
+                urlInput.style.display = 'block';
+                document.querySelector('[name="image_file"]').required = false;
+                document.querySelector('[name="image_url"]').required = true;
+            }
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

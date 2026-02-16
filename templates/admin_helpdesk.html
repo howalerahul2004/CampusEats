@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Help Desk</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('admin_dashboard') }}" class="logo">🍔 Campus Eats - Admin</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('admin_foods') }}">Manage Food</a></li>
+                <li><a href="{{ url_for('admin_orders') }}">Orders</a></li>
+                <li><a href="{{ url_for('admin_users') }}">Users</a></li>
+                <li><a href="{{ url_for('admin_helpdesk') }}">Help Desk</a></li>
+                <li><a href="{{ url_for('admin_reports') }}">Reports</a></li>
+                <li><a href="{{ url_for('admin_logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 style="margin-bottom: 2rem;">🎫 Support Tickets</h1>
+
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        {% if tickets %}
+        {% for ticket in tickets %}
+        <div class="order-card">
+            <div class="order-header">
+                <div>
+                    <h3>Ticket #{{ ticket.ticket_id }}</h3>
+                    <p style="color: var(--text-secondary);">{{ ticket.subject }}</p>
+                    <p style="margin-top: 0.5rem;">
+                        <strong>From:</strong> {{ ticket.user_name }} ({{ ticket.email }})<br>
+                        {% if ticket.order_id %}
+                        <strong>Order:</strong> #{{ ticket.order_id }}<br>
+                        {% endif %}
+                        <strong>Type:</strong> <span class="category-badge">{{ ticket.issue_type }}</span>
+                    </p>
+                </div>
+                <div>
+                    <span class="order-status status-{{ ticket.status.replace('_', '-') }}">
+                        {{ ticket.status.replace('_', ' ').title() }}
+                    </span>
+                    <p style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                        {{ ticket.created_at.strftime('%b %d, %Y %I:%M %p') }}
+                    </p>
+                </div>
+            </div>
+
+            <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 8px; margin: 1rem 0;">
+                <strong>Issue Description:</strong>
+                <p style="margin-top: 0.5rem; color: var(--text-color);">{{ ticket.description }}</p>
+            </div>
+
+            {% if ticket.admin_response %}
+            <div style="padding: 1rem; background: #d4edda; border-radius: 8px; margin: 1rem 0; border-left: 3px solid var(--success);">
+                <strong style="color: #155724;">Your Response:</strong>
+                <p style="margin-top: 0.5rem; color: #155724;">{{ ticket.admin_response }}</p>
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('respond_ticket', ticket_id=ticket.ticket_id) }}" style="margin-top: 1rem;">
+                <div class="form-group">
+                    <label for="response-{{ ticket.ticket_id }}">Response</label>
+                    <textarea name="response" id="response-{{ ticket.ticket_id }}" 
+                              class="form-control" rows="3" required
+                              placeholder="Enter your response to the user..."></textarea>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label for="status-{{ ticket.ticket_id }}">Update Status</label>
+                        <select name="status" id="status-{{ ticket.ticket_id }}" class="form-control">
+                            <option value="open" {% if ticket.status == 'open' %}selected{% endif %}>Open</option>
+                            <option value="in_progress" {% if ticket.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                            <option value="resolved" {% if ticket.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                            <option value="closed" {% if ticket.status == 'closed' %}selected{% endif %}>Closed</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success" style="margin-top: 1.8rem;">
+                        Send Response
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <div style="font-size: 4rem;">📭</div>
+            <h3>No support tickets</h3>
+            <p>All caught up! No pending issues.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+</body>
+</html>

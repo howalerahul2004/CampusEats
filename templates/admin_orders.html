@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Orders - Admin</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('admin_dashboard') }}" class="logo">🍔 Campus Eats - Admin</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                <li><a href="{{ url_for('admin_foods') }}">Manage Food</a></li>
+                <li><a href="{{ url_for('admin_orders') }}">Orders</a></li>
+                <li><a href="{{ url_for('admin_users') }}">Users</a></li>
+                <li><a href="{{ url_for('admin_helpdesk') }}">Help Desk</a></li>
+                <li><a href="{{ url_for('admin_reports') }}">Reports</a></li>
+                <li><a href="{{ url_for('admin_logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 style="margin-bottom: 2rem;">Manage Orders</h1>
+
+        <!-- Search and Filters -->
+        <div class="search-filters" style="background: var(--card-bg); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <div class="form-group" style="margin: 0;">
+                    <input type="text" id="searchOrder" class="form-control" placeholder="Search by ID, name..." oninput="filterOrders()">
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <select id="statusFilter" class="form-control" onchange="filterOrders()">
+                        <option value="">All Status</option>
+                        <option value="placed">Placed</option>
+                        <option value="pending">Pending</option>
+                        <option value="preparing">Preparing</option>
+                        <option value="ready">Ready</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <select id="typeFilter" class="form-control" onchange="filterOrders()">
+                        <option value="">All Types</option>
+                        <option value="regular">Regular Orders</option>
+                        <option value="event">Event/Bulk Orders</option>
+                        <option value="scheduled">Scheduled Orders</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <select id="priorityFilter" class="form-control" onchange="filterOrders()">
+                        <option value="">All Priority</option>
+                        <option value="high">High Priority</option>
+                        <option value="normal">Normal Priority</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <select id="sortBy" class="form-control" onchange="filterOrders()">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="total-high">Total (High to Low)</option>
+                        <option value="total-low">Total (Low to High)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Student/Staff</th>
+                        <th>Phone</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Payment</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr style="{% if order.priority == 'high' %}background: rgba(226, 55, 68, 0.05);{% endif %}">
+                        <td>
+                            <strong>#{{ order.order_id }}</strong>
+                            {% if order.is_bulk_order %}
+                            <br><span style="background: #fff3cd; padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.8rem;">🎉 Event</span>
+                            {% endif %}
+                            {% if order.order_type == 'scheduled' %}
+                            <br><span style="background: #cfe2ff; padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.8rem;">📅 Scheduled</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ order.user_name }}
+                            <br>
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">
+                                ({{ order.user_type|capitalize }})
+                            </span>
+                            {% if order.special_instructions %}
+                            <div style="font-size:0.80rem; color: var(--text-secondary); margin-top:0.25rem;">📎 {{ order.special_instructions[:80] }}</div>
+                            {% endif %}
+                        </td>
+                        <td>{{ order.phone }}</td>
+                        <td>{{ order.item_count }}</td>
+                        <td><strong>₹{{ order.total_amount }}</strong></td>
+                        <td>
+                            {% if order.priority == 'high' %}
+                            <span class="priority-badge">HIGH</span>
+                            {% else %}
+                            <span style="padding: 0.25rem 0.5rem; background: var(--light); border-radius: 3px; font-size: 0.85rem;">Normal</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="order-status status-{{ order.status.lower() }}">
+                                {{ order.status }}
+                            </span>
+                        </td>
+                        <td>{{ order.payment_method }}</td>
+                        <td style="font-size: 0.85rem;">{{ order.order_date.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>
+                            {% if order.status == 'placed' %}
+                            <form method="POST" action="{{ url_for('accept_order', order_id=order.order_id) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-success btn-small" 
+                                        onclick="return confirm('Accept this order? Timer will start for customer.')">
+                                    ✅ Accept
+                                </button>
+                            </form>
+                            {% else %}
+                            <form method="POST" action="{{ url_for('update_order_status', order_id=order.order_id) }}" style="display: inline;">
+                                <select name="status" class="form-control" style="width: auto; display: inline-block; padding: 0.3rem; font-size: 0.85rem;" onchange="this.form.submit()">
+                                    <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Pending</option>
+                                    <option value="preparing" {% if order.status == 'preparing' %}selected{% endif %}>Preparing</option>
+                                    <option value="ready" {% if order.status == 'ready' %}selected{% endif %}>Ready</option>
+                                    <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Completed</option>
+                                    <option value="cancelled" {% if order.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                                </select>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if not orders %}
+        <div class="empty-state">
+            <div style="font-size: 4rem;">📋</div>
+            <h3>No orders yet</h3>
+            <p>Orders will appear here once students start ordering.</p>
+        </div>
+        {% endif %}
+
+        {% if orders %}
+        <div style="margin-top: 2rem; padding: 1.5rem; background: var(--card-bg); border-radius: 8px; box-shadow: 0 3px 15px rgba(0,0,0,0.1);">
+            <h3 style="margin-bottom: 1rem;">Order Statistics</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 5px; text-align: center;">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--primary-color);">
+                        {{ orders|selectattr('status', 'equalto', 'placed')|list|length }}
+                    </div>
+                    <div style="color: var(--text-secondary);">Pending Acceptance</div>
+                </div>
+                <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 5px; text-align: center;">
+                    <div style="font-size: 2rem; font-weight: bold; color: #ffc107;">
+                        {{ orders|selectattr('status', 'equalto', 'preparing')|list|length }}
+                    </div>
+                    <div style="color: var(--text-secondary);">Being Prepared</div>
+                </div>
+                <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 5px; text-align: center;">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--success);">
+                        {{ orders|selectattr('status', 'equalto', 'ready')|list|length }}
+                    </div>
+                    <div style="color: var(--text-secondary);">Ready for Pickup</div>
+                </div>
+                <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 5px; text-align: center;">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--info);">
+                        {{ orders|selectattr('priority', 'equalto', 'high')|list|length }}
+                    </div>
+                    <div style="color: var(--text-secondary);">High Priority</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script>
+        function filterOrders() {
+            const searchText = document.getElementById('searchOrder').value.toLowerCase();
+            const status = document.getElementById('statusFilter').value;
+            const type = document.getElementById('typeFilter').value;
+            const priority = document.getElementById('priorityFilter').value;
+            const sortBy = document.getElementById('sortBy').value;
+            const rows = Array.from(document.querySelector('tbody').getElementsByTagName('tr'));
+            
+            // Filter rows
+            rows.forEach(row => {
+                const orderId = row.cells[0].textContent.toLowerCase();
+                const customerName = row.cells[1].textContent.toLowerCase();
+                const rowStatus = row.cells[6].textContent.toLowerCase();
+                const isEvent = row.cells[0].textContent.includes('Event');
+                const isScheduled = row.cells[0].textContent.includes('Scheduled');
+                const isPriorityHigh = row.cells[5].textContent.toLowerCase().includes('high');
+                
+                const matchesSearch = orderId.includes(searchText) || 
+                                    customerName.includes(searchText);
+                const matchesStatus = !status || rowStatus.includes(status.toLowerCase());
+                const matchesType = !type || 
+                                  (type === 'regular' && !isEvent && !isScheduled) ||
+                                  (type === 'event' && isEvent) ||
+                                  (type === 'scheduled' && isScheduled);
+                const matchesPriority = !priority || 
+                                      (priority === 'high' && isPriorityHigh) ||
+                                      (priority === 'normal' && !isPriorityHigh);
+                
+                row.style.display = matchesSearch && matchesStatus && matchesType && matchesPriority ? '' : 'none';
+            });
+            
+            // Sort visible rows
+            const visibleRows = rows.filter(row => row.style.display !== 'none');
+            visibleRows.sort((a, b) => {
+                const getDateValue = row => new Date(row.cells[8].textContent.split(' ')[0].split('/').reverse().join('-'));
+                const getTotal = row => parseFloat(row.cells[4].textContent.replace('₹', ''));
+                
+                switch(sortBy) {
+                    case 'oldest':
+                        return getDateValue(a) - getDateValue(b);
+                    case 'total-high':
+                        return getTotal(b) - getTotal(a);
+                    case 'total-low':
+                        return getTotal(a) - getTotal(b);
+                    default: // newest
+                        return getDateValue(b) - getDateValue(a);
+                }
+            });
+            
+            // Reorder rows
+            const tbody = document.querySelector('tbody');
+            visibleRows.forEach(row => tbody.appendChild(row));
+        }
+    </script>
+</body>
+</html>

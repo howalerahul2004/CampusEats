@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ session.theme or 'light' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Orders - Campus Eats</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .timer-display {
+            background: #fff3cd;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+            color: #856404;
+            display: inline-block;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('menu') }}" class="logo">🍔 Campus Eats</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('menu') }}">Menu</a></li>
+                <li><a href="{{ url_for('cart') }}">Cart</a></li>
+                <li><a href="{{ url_for('orders') }}">My Orders</a></li>
+                {% if session.user_id %}
+                <li><a href="{{ url_for('helpdesk') }}">Help Desk</a></li>
+                {% endif %}
+                <li><button class="theme-toggle" onclick="toggleTheme()"><span id="theme-icon">🌙</span></button></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 style="margin-bottom: 2rem;">My Orders</h1>
+
+        {% if orders %}
+        {% for order in orders %}
+        <div class="order-card" data-order-id="{{ order.order_id }}">
+            <div class="order-header">
+                <div>
+                    <span class="order-id">Order #{{ order.order_id }}</span>
+                    {% if order.priority == 'high' %}
+                    <span class="priority-badge">HIGH PRIORITY</span>
+                    {% endif %}
+                    <p style="color: #666; margin-top: 0.5rem;">{{ order.order_date|format_datetime('%B %d, %Y at %I:%M %p') }}</p>
+                    <p style="color: #666;">{{ order.item_count }} items</p>
+                    {% if order.is_bulk_order %}
+                    <p style="color: var(--primary-color); font-weight: 600;">🎉 Event: {{ order.event_name }}</p>
+                    {% endif %}
+                </div>
+                <div style="text-align: right;">
+                    <span class="order-status status-{{ order.status.lower() }}">{{ order.status }}</span>
+                    <p style="font-size: 1.2rem; font-weight: bold; margin-top: 0.5rem; color: var(--primary-color);">
+                        ₹{{ order.total_amount }}
+                    </p>
+                    {% if order.stage_times and order.status not in ['completed', 'cancelled'] %}
+                    <div class="timer-display" id="timer-{{ order.order_id }}">
+                        Calculating...
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if order.stage_times and order.admin_accepted_at %}
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-step {% if order.status in ['placed', 'pending', 'preparing', 'ready', 'completed'] %}completed{% endif %}">
+                        <div class="progress-icon">1</div>
+                        <div class="progress-label">Placed</div>
+                    </div>
+                    <div class="progress-step {% if order.status in ['pending', 'preparing', 'ready', 'completed'] %}completed{% elif order.status == 'placed' %}active{% endif %}">
+                        <div class="progress-icon">2</div>
+                        <div class="progress-label">Accepted</div>
+                    </div>
+                    <div class="progress-step {% if order.status in ['preparing', 'ready', 'completed'] %}completed{% elif order.status == 'pending' %}active{% endif %}">
+                        <div class="progress-icon">3</div>
+                        <div class="progress-label">Preparing</div>
+                    </div>
+                    <div class="progress-step {% if order.status in ['ready', 'completed'] %}completed{% elif order.status == 'preparing' %}active{% endif %}">
+                        <div class="progress-icon">4</div>
+                        <div class="progress-label">Ready</div>
+                    </div>
+                    <div class="progress-step {% if order.status == 'completed' %}completed{% elif order.status == 'ready' %}active{% endif %}">
+                        <div class="progress-icon">5</div>
+                        <div class="progress-label">Completed</div>
+                    </div>
+                </div>
+            </div>
+            {% elif order.status == 'placed' %}
+            <div style="background: #fff3cd; padding: 1rem; border-radius: 8px; margin: 1rem 0; text-align: center;">
+                ⏳ Waiting for canteen to accept your order...
+            </div>
+            {% endif %}
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                <div>
+                    <p><strong>Payment:</strong> {{ order.payment_method }} ({{ order.payment_status }})</p>
+                    {% if order.order_type == 'scheduled' %}
+                    <p><strong>Scheduled For:</strong> {{ order.scheduled_date|format_datetime('%B %d, %Y') }} at {{ order.scheduled_time|format_datetime('%I:%M %p') }}</p>
+                    {% endif %}
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-secondary btn-small view-details-btn" data-order-id="{{ order.order_id }}">
+                        View Details
+                    </button>
+                    {% if order.status == 'completed' %}
+                    <a href="{{ url_for('order_receipt', order_id=order.order_id) }}" class="btn btn-info btn-small">
+                        📄 Receipt
+                    </a>
+                    <button class="btn btn-primary btn-small" onclick="openRatingModal({{ order.order_id }})">
+                        ⭐ Rate
+                    </button>
+                    {% else %}
+                    {# Allow cancellation when order is not completed or already cancelled #}
+                    {% if order.status not in ['completed', 'cancelled'] %}
+                    <button class="btn btn-danger btn-small cancel-order-btn" data-order-id="{{ order.order_id }}">
+                        ❌ Cancel
+                    </button>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <div style="font-size: 4rem;">📦</div>
+            <h3>No orders yet</h3>
+            <p>Start ordering delicious food from the canteen!</p>
+            <a href="{{ url_for('menu') }}" class="btn btn-primary" style="margin-top: 1rem;">Browse Menu</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Order Details Modal -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('orderModal')">&times;</span>
+            <h2 style="margin-bottom: 1.5rem;">Order Details</h2>
+            <div id="orderDetails"></div>
+        </div>
+    </div>
+
+    <!-- Rating Modal -->
+    <div id="ratingModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('ratingModal')">&times;</span>
+            <h2 style="margin-bottom: 1.5rem;">Rate Your Order</h2>
+            <div id="ratingContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const orderTimers = {};
+        
+        {% for order in orders %}
+        {% if order.stage_times and order.status not in ['completed', 'cancelled'] %}
+        (function() {
+            const orderId = {{ order.order_id }};
+            // `tojson` emits a JS object (or string) depending on context.
+            // Accept either and normalize to an object here.
+            const stageTimes = {{ order.stage_times|tojson }};
+            const stages = (typeof stageTimes === 'string') ? JSON.parse(stageTimes) : stageTimes;
+            // Debug output to help diagnose timer issues in the browser console
+            console.debug('order', orderId, 'stageTimes', stages);
+
+            try {
+                updateTimer(orderId, stages);
+                orderTimers[orderId] = setInterval(() => updateTimer(orderId, stages), 1000);
+            } catch (e) {
+                console.error('Timer init failed for order', orderId, e);
+            }
+        })();
+        {% endif %}
+        {% endfor %}
+        
+        function updateTimer(orderId, stages) {
+            const now = new Date();
+            let currentStage = 'placed';
+            let nextStageTime = null;
+            
+            const stageOrder = ['placed', 'pending', 'preparing', 'ready', 'completed'];
+            for (let i = 0; i < stageOrder.length; i++) {
+                const stage = stageOrder[i];
+                if (stages[stage] && now >= new Date(stages[stage])) {
+                    currentStage = stage;
+                    if (i < stageOrder.length - 1) {
+                        nextStageTime = stages[stageOrder[i + 1]];
+                    }
+                }
+            }
+            
+            const timerEl = document.getElementById(`timer-${orderId}`);
+            if (timerEl && nextStageTime) {
+                const remaining = Math.floor((new Date(nextStageTime) - now) / 1000);
+                if (remaining > 0) {
+                    const minutes = Math.floor(remaining / 60);
+                    const seconds = remaining % 60;
+                    timerEl.textContent = `⏱️ ${minutes}:${seconds.toString().padStart(2, '0')} remaining`;
+                } else {
+                    timerEl.textContent = 'Updating status...';
+                    setTimeout(() => location.reload(), 5000);
+                }
+            }
+        }
+        
+        // View order details
+        document.querySelectorAll('.view-details-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const orderId = this.getAttribute('data-order-id');
+                
+                try {
+                    const response = await fetch(`/order_details/${orderId}`);
+                    const data = await response.json();
+                    
+                    let html = `
+                        <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 5px; margin-bottom: 1rem;">
+                            <p><strong>Order ID:</strong> #${data.order.order_id}</p>
+                            <p><strong>Date:</strong> ${new Date(data.order.order_date).toLocaleString()}</p>
+                            <p><strong>Status:</strong> <span class="order-status status-${data.order.status.toLowerCase()}">${data.order.status}</span></p>
+                            <p><strong>Payment:</strong> ${data.order.payment_method} (${data.order.payment_status})</p>
+                        </div>
+                        <h3 style="margin: 1.5rem 0 1rem;">Items Ordered:</h3>
+                    `;
+
+                    // Show special instructions if available
+                    if (data.order.special_instructions) {
+                        function escapeHtml(str) {
+                            return String(str)
+                                .replace(/&/g, '&amp;')
+                                .replace(/</g, '&lt;')
+                                .replace(/>/g, '&gt;')
+                                .replace(/"/g, '&quot;')
+                                .replace(/'/g, '&#39;');
+                        }
+                        html = html.replace('</div>\n                         <h3', `</div>\n                         <div style="background: var(--bg-secondary); padding: 0.75rem; border-radius:6px; margin-bottom: 1rem;"><strong>Special Instructions:</strong> ${escapeHtml(data.order.special_instructions)}</div>\n                         <h3`);
+                    }
+                    
+                    data.items.forEach(item => {
+                        html += `
+                            <div style="display: flex; gap: 1rem; padding: 1rem; border-bottom: 1px solid var(--border); align-items: center;">
+                                <img src="${item.image_url}" alt="${item.name}" 
+                                     style="width: 80px; height: 80px; object-fit: cover; border-radius: 5px;"
+                                     onerror="this.src='/static/images/placeholder.jpg'">
+                                <div style="flex: 1;">
+                                    <h4>${item.name}</h4>
+                                    <p style="color: var(--text-secondary);">Quantity: ${item.quantity}</p>
+                                    <p style="color: var(--primary-color); font-weight: bold;">₹${item.price} each</p>
+                                </div>
+                                <div style="text-align: right;">
+                                    <p style="font-weight: bold; font-size: 1.1rem;">₹${(item.quantity * item.price).toFixed(2)}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `
+                        <div style="text-align: right; margin-top: 1.5rem; padding-top: 1rem; border-top: 2px solid var(--border);">
+                            <h2 style="color: var(--primary-color);">Total: ₹${data.order.total_amount}</h2>
+                        </div>
+                    `;
+                    
+                    document.getElementById('orderDetails').innerHTML = html;
+                    // If order is cancellable, add cancel button handler
+                    if (data.order.status && !['completed','cancelled'].includes(data.order.status)) {
+                        // Append cancel button
+                        const cancelBtnHtml = `<div style="margin-top: 1rem; text-align: center;"><button class="btn btn-danger" id="modal-cancel-btn">❌ Cancel Order</button></div>`;
+                        document.getElementById('orderDetails').insertAdjacentHTML('beforeend', cancelBtnHtml);
+                        document.getElementById('modal-cancel-btn').addEventListener('click', function(){
+                            if (confirm('Cancel this order?')) cancelOrder(data.order.order_id);
+                        });
+                    }
+
+                    document.getElementById('orderModal').style.display = 'block';
+                } catch (error) {
+                    alert('Error loading order details');
+                }
+            });
+        });
+
+        // Cancel order from list or modal
+        async function cancelOrder(orderId) {
+            try {
+                    const resp = await fetch(`/cancel_order/${orderId}`, { method: 'POST' });
+                    const data = await resp.json();
+                    if (data.success) {
+                        // show refund/success alert and then refresh
+                        if (data.message) alert(data.message);
+                        else alert('Order cancelled successfully.');
+                        location.reload();
+                    } else {
+                        alert(data.message || 'Order cannot be cancelled.');
+                    }
+                } catch (err) {
+                    console.error('Cancel failed', err);
+                    alert('Error cancelling order');
+                }
+        }
+
+        // Attach cancel handlers for list buttons
+        document.querySelectorAll('.cancel-order-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const orderId = this.getAttribute('data-order-id');
+                if (confirm('Cancel this order?')) cancelOrder(orderId);
+            });
+        });
+
+        // Rating modal
+        async function openRatingModal(orderId) {
+            try {
+                const response = await fetch(`/order_details/${orderId}`);
+                const data = await response.json();
+                
+                let html = '<div style="max-height: 400px; overflow-y: auto;">';
+                
+                data.items.forEach(item => {
+                    html += `
+                        <div style="margin-bottom: 2rem; padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
+                            <h4 style="margin-bottom: 1rem;">${item.name}</h4>
+                            <form method="POST" action="/rate_food/${item.food_id}" onsubmit="return ensureRatingSelected(${item.food_id})" style="margin-bottom: 1rem;">
+                                <input type="hidden" name="order_id" value="${orderId}">
+                                <div class="form-group">
+                                    <label>Rating</label>
+                                    <div class="rating-input" id="rating-${item.food_id}">
+                                        <!-- Hidden field named 'rating' (what backend expects). JS will populate this before submit. -->
+                                        <input type="hidden" name="rating" id="hidden-rating-${item.food_id}" value="">
+                                        ${[1,2,3,4,5].map(i => `
+                                            <!-- Use a per-item radio name so multiple item groups don't interfere -->
+                                            <input type="radio" name="rating-${item.food_id}" value="${i}" id="star-${item.food_id}-${i}">
+                                            <label for="star-${item.food_id}-${i}" onclick="setRating(${item.food_id}, ${i})">⭐</label>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Review (Optional)</label>
+                                    <textarea name="review" class="form-control" rows="3" placeholder="Share your experience..."></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-small" style="width: 100%;">Submit Rating</button>
+                            </form>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                
+                document.getElementById('ratingContent').innerHTML = html;
+                document.getElementById('ratingModal').style.display = 'block';
+
+                // Attach AJAX submit handlers to rating forms so the modal doesn't close on submit
+                const ratingForms = document.getElementById('ratingContent').querySelectorAll('form');
+                ratingForms.forEach(form => {
+                    form.addEventListener('submit', async function(e) {
+                        e.preventDefault();
+                        const submitBtn = form.querySelector('button[type="submit"]');
+                        if (submitBtn) submitBtn.disabled = true;
+
+                        const action = form.getAttribute('action');
+                        const fd = new FormData(form);
+
+                        try {
+                            const resp = await fetch(action, {
+                                method: 'POST',
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: fd
+                            });
+
+                            const data = await resp.json().catch(() => ({ success: resp.ok }));
+                            if (data && data.success) {
+                                // Mark this form as submitted and disable inputs
+                                form.querySelectorAll('input, textarea, button').forEach(el => el.disabled = true);
+                                // Provide inline success feedback
+                                const msg = document.createElement('div');
+                                msg.style.marginTop = '0.5rem';
+                                msg.style.padding = '0.5rem';
+                                msg.style.borderRadius = '6px';
+                                msg.style.background = 'var(--bg-success)';
+                                msg.style.color = 'var(--text-success)';
+                                msg.textContent = data.message || 'Rating submitted';
+                                form.insertAdjacentElement('afterend', msg);
+                            } else {
+                                alert((data && data.message) || 'Rating failed.');
+                                if (submitBtn) submitBtn.disabled = false;
+                            }
+                        } catch (err) {
+                            console.error('Rating submit failed', err);
+                            alert('An error occurred while submitting the rating.');
+                            if (submitBtn) submitBtn.disabled = false;
+                        }
+                    });
+                });
+            } catch (error) {
+                alert('Error loading rating form');
+            }
+        }
+
+        function setRating(foodId, rating) {
+            const container = document.getElementById(`rating-${foodId}`);
+            const labels = container.querySelectorAll('label');
+            labels.forEach((label, index) => {
+                if (index < rating) {
+                    label.classList.add('active');
+                } else {
+                    label.classList.remove('active');
+                }
+            });
+            // Populate hidden input that backend expects
+            try {
+                const hidden = document.getElementById(`hidden-rating-${foodId}`);
+                if (hidden) hidden.value = rating;
+            } catch (e) {
+                console.warn('Could not set hidden rating value', e);
+            }
+        }
+
+        function ensureRatingSelected(foodId) {
+            const hidden = document.getElementById(`hidden-rating-${foodId}`);
+            if (!hidden || !hidden.value) {
+                alert('Please select a rating before submitting.');
+                return false;
+            }
+            return true;
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+        
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            document.getElementById('theme-icon').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            fetch('/toggle_theme', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `theme=${newTheme}`
+            });
+        }
+        
+        const savedTheme = '{{ session.theme }}' || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('theme-icon').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    </script>
+</body>
+</html>

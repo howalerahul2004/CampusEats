@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ session.theme or 'light' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart - Campus Eats</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('menu') }}" class="logo">🍔 Campus Eats</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('menu') }}">Menu</a></li>
+                <li><a href="{{ url_for('cart') }}">Cart</a></li>
+                <li><a href="{{ url_for('orders') }}">My Orders</a></li>
+                {% if session.user_id %}
+                <li><a href="{{ url_for('helpdesk') }}">Help Desk</a></li>
+                {% endif %}
+                <li><button class="theme-toggle" onclick="toggleTheme()"><span id="theme-icon">🌙</span></button></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1 style="margin-bottom: 2rem;">Shopping Cart</h1>
+
+        {% if cart_items %}
+        <div class="cart-container">
+            {% for item in cart_items %}
+            <div class="cart-item">
+                <img src="{{ item.image_url }}" alt="{{ item.name }}" class="cart-image"
+                     onerror="this.src='/static/images/placeholder.jpg'">
+                <div class="cart-details">
+                    <h3 class="cart-name">{{ item.name }}</h3>
+                    <p class="cart-price">₹{{ item.price }} each</p>
+                </div>
+                <div class="quantity-control">
+                    <form method="POST" action="{{ url_for('update_cart') }}" style="display: inline;">
+                        <input type="hidden" name="cart_id" value="{{ item.cart_id }}">
+                        <input type="hidden" name="quantity" value="{{ item.quantity - 1 }}">
+                        <button type="submit" class="quantity-btn">-</button>
+                    </form>
+                    <input type="text" value="{{ item.quantity }}" class="quantity-input" readonly>
+                    <form method="POST" action="{{ url_for('update_cart') }}" style="display: inline;">
+                        <input type="hidden" name="cart_id" value="{{ item.cart_id }}">
+                        <input type="hidden" name="quantity" value="{{ item.quantity + 1 }}">
+                        <button type="submit" class="quantity-btn">+</button>
+                    </form>
+                </div>
+                <div style="text-align: right;">
+                    <p style="font-size: 1.2rem; font-weight: bold; margin-bottom: 0.5rem;">₹{{ item.subtotal }}</p>
+                    <a href="{{ url_for('remove_from_cart', cart_id=item.cart_id) }}" 
+                       class="btn btn-danger btn-small"
+                       onclick="return confirm('Remove this item?')">Remove</a>
+                </div>
+            </div>
+            {% endfor %}
+
+            <div class="cart-summary">
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span>₹{{ total }}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Delivery:</span>
+                    <span style="color: var(--success);">Free</span>
+                </div>
+                {% if session.get('subscription_status') == 'active' %}
+                <div class="summary-row" style="color: var(--success);">
+                    <span>Subscription Discount (10%):</span>
+                    <span>-₹{{ (total * 0.1)|round(2) }}</span>
+                </div>
+                {% endif %}
+                <div class="summary-row summary-total">
+                    <span>Total:</span>
+                    <span>₹{{ (total * 0.9)|round(2) if session.get('subscription_status') == 'active' else total }}</span>
+                </div>
+                
+                <a href="{{ url_for('checkout') }}" class="btn btn-success" style="width: 100%; padding: 1rem; font-size: 1.1rem; margin-top: 1rem; text-align: center; display: block; text-decoration: none;">
+                    Proceed to Checkout
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div style="font-size: 4rem;">🛒</div>
+            <h3>Your cart is empty</h3>
+            <p>Add some delicious items to get started!</p>
+            <a href="{{ url_for('menu') }}" class="btn btn-primary" style="margin-top: 1rem;">Browse Menu</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            document.getElementById('theme-icon').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            fetch('/toggle_theme', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `theme=${newTheme}`
+            });
+        }
+        
+        const savedTheme = '{{ session.theme }}' || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('theme-icon').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    </script>
+</body>
+</html>

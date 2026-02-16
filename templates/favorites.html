@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ session.theme or 'light' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Favorites - Campus Eats</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('menu') }}" class="logo">🍔 Campus Eats</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('menu') }}">Menu</a></li>
+                <li><a href="{{ url_for('favorites') }}">Favorites</a></li>
+                <li><a href="{{ url_for('cart') }}">Cart</a></li>
+                <li><a href="{{ url_for('orders') }}">My Orders</a></li>
+                {% if session.user_id %}
+                <li><a href="{{ url_for('helpdesk') }}">Help Desk</a></li>
+                {% endif %}
+                <li><button class="theme-toggle" onclick="toggleTheme()"><span id="theme-icon">🌙</span></button></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>❤️ My Favorites</h1>
+            {% if foods %}
+            <form method="POST" action="{{ url_for('order_favorites') }}" style="margin: 0;">
+                <button type="submit" class="btn btn-primary" onclick="return confirm('Order all favorite items?')">
+                    🚀 Order All Favorites ({{ foods|length }} items)
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
+        {% if foods %}
+        <div class="food-grid">
+            {% for food in foods %}
+            <div class="food-card">
+                <img src="{{ food.image_url }}" alt="{{ food.name }}" class="food-image" 
+                     onerror="this.src='/static/images/placeholder.jpg'">
+                
+                <div class="food-info">
+                    <span class="category-badge">{{ food.category_name }}</span>
+                    <h3 class="food-name">{{ food.name }}</h3>
+                    <p class="food-description">{{ food.description }}</p>
+                    
+                    {% if food.avg_rating > 0 %}
+                    <div class="food-rating">
+                        <span class="stars">
+                            {% for i in range(food.avg_rating|int) %}⭐{% endfor %}
+                        </span>
+                        <span style="color: var(--text-secondary);">
+                            {{ "%.1f"|format(food.avg_rating) }} ({{ food.total_ratings }})
+                        </span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="food-footer">
+                        <span class="food-price">₹{{ food.price }}</span>
+                        <div class="food-actions">
+                            <button class="favorite-btn active" 
+                                    onclick="removeFavorite({{ food.food_id }}, this)">
+                                ❤️
+                            </button>
+                            <button class="btn btn-primary btn-small" onclick="addToCart({{ food.food_id }})">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div style="font-size: 4rem;">💔</div>
+            <h3>No favorites yet</h3>
+            <p>Start adding your favorite items from the menu!</p>
+            <a href="{{ url_for('menu') }}" class="btn btn-primary" style="margin-top: 1rem;">Browse Menu</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        async function removeFavorite(foodId, button) {
+            try {
+                const formData = new FormData();
+                formData.append('food_id', foodId);
+
+                const response = await fetch('/toggle_favorite', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Remove the card
+                    button.closest('.food-card').style.animation = 'fadeOut 0.3s';
+                    setTimeout(() => {
+                        button.closest('.food-card').remove();
+                        
+                        // Check if any favorites left
+                        const remaining = document.querySelectorAll('.food-card').length;
+                        if (remaining === 0) {
+                            location.reload();
+                        }
+                    }, 300);
+                    
+                    showToast('Removed from favorites', 'success');
+                } else {
+                    showToast('Failed to remove', 'error');
+                }
+            } catch (error) {
+                showToast('Error removing favorite', 'error');
+            }
+        }
+
+        async function addToCart(foodId) {
+            try {
+                const formData = new FormData();
+                formData.append('food_id', foodId);
+
+                const response = await fetch('/add_to_cart', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Added to cart!', 'success');
+                } else {
+                    showToast('Failed to add to cart', 'error');
+                }
+            } catch (error) {
+                showToast('Error adding to cart', 'error');
+            }
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            document.getElementById('theme-icon').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            
+            fetch('/toggle_theme', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `theme=${newTheme}`
+            });
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.style.background = type === 'success' ? '#d4edda' : '#f8d7da';
+            toast.style.color = type === 'success' ? '#155724' : '#721c24';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Initialize theme
+        const savedTheme = '{{ session.theme }}' || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('theme-icon').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+        // Add fade out animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeOut {
+                from { opacity: 1; transform: scale(1); }
+                to { opacity: 0; transform: scale(0.9); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
